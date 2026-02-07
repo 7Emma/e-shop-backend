@@ -2,10 +2,15 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 const generateToken = (userId, role) => {
+  // ✅ JWT_SECRET must be configured
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured. Please set it in environment variables.');
+  }
+
   return jwt.sign(
     { id: userId, role },
-    process.env.JWT_SECRET || 'secret_key',
-    { expiresIn: '7d' }
+    process.env.JWT_SECRET,
+    { expiresIn: '1d' }  // ✅ Reduced from 7d to 1d for better security
   );
 };
 
@@ -37,10 +42,17 @@ export const register = async (req, res) => {
 
     const token = generateToken(user._id, user.role);
 
+    // ✅ Store token in httpOnly cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000  // 1 day
+    });
+
     res.status(201).json({
       success: true,
       message: 'Inscription réussie',
-      token,
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -74,10 +86,17 @@ export const login = async (req, res) => {
 
     const token = generateToken(user._id, user.role);
 
+    // ✅ Store token in httpOnly cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000  // 1 day
+    });
+
     res.json({
       success: true,
       message: 'Connexion réussie',
-      token,
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -89,4 +108,15 @@ export const login = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+// ✅ New logout endpoint
+export const logout = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
+
+  res.json({ success: true, message: 'Logout réussi' });
 };

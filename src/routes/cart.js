@@ -6,14 +6,14 @@ import {
   removeFromCart,
   clearCart,
 } from '../controllers/cartController.js';
-import { verifyToken } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-router.get('/', verifyToken, getCart);
-router.post('/add', verifyToken, addToCart);
-router.put('/update/:productId', verifyToken, updateCartItem);
-router.delete('/remove/:productId', verifyToken, removeFromCart);
-router.delete('/clear', verifyToken, clearCart);
+// ⚠️ Pas d'authentification requise - Accès libre
+router.get('/', getCart);
+router.post('/add', addToCart);
+router.put('/update/:productId', updateCartItem);
+router.delete('/remove/:productId', removeFromCart);
+router.delete('/clear', clearCart);
 
 export default router;

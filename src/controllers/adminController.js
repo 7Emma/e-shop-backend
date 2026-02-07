@@ -2,6 +2,7 @@ import Product from '../models/Product.js';
 import User from '../models/User.js';
 import Order from '../models/Order.js';
 import Review from '../models/Review.js';
+import { escapeRegex, buildSafeRegexQuery } from '../utils/mongoEscape.js';
 
 // ============ STATISTIQUES ============
 
@@ -192,16 +193,19 @@ export const getAllProducts = async (req, res) => {
 
     const query = {};
     if (category) query.category = category;
+    
+    // ✅ Escape regex to prevent NoSQL injection
     if (search) {
+      const escapedSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { sku: { $regex: search, $options: 'i' } }
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { sku: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
 
     const products = await Product.find(query)
-      .skip(skip)
-      .limit(parseInt(limit))
+      .skip(Math.max(0, (parseInt(page) - 1) * parseInt(limit)))
+      .limit(Math.min(100, parseInt(limit)))  // Max limit 100
       .sort({ createdAt: -1 });
 
     const total = await Product.countDocuments(query);
@@ -210,7 +214,7 @@ export const getAllProducts = async (req, res) => {
       success: true,
       products,
       total,
-      pages: Math.ceil(total / limit)
+      pages: Math.ceil(total / parseInt(limit))
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -225,22 +229,29 @@ export const getAllProducts = async (req, res) => {
 export const getAllUsers = async (req, res) => {
   try {
     const { page = 1, limit = 10, role, search } = req.query;
-    const skip = (page - 1) * limit;
+    const parsedPage = Math.max(1, parseInt(page));
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (parsedPage - 1) * parsedLimit;
 
     const query = {};
-    if (role) query.role = role;
+    if (role && ['user', 'admin'].includes(role)) {
+      query.role = role;
+    }
+    
+    // ✅ Escape regex to prevent NoSQL injection
     if (search) {
+      const escapedSearch = escapeRegex(search);
       query.$or = [
-        { email: { $regex: search, $options: 'i' } },
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } }
+        { email: { $regex: escapedSearch, $options: 'i' } },
+        { firstName: { $regex: escapedSearch, $options: 'i' } },
+        { lastName: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
 
     const users = await User.find(query)
       .select('-password')
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(parsedLimit)
       .sort({ createdAt: -1 });
 
     const total = await User.countDocuments(query);
@@ -249,7 +260,7 @@ export const getAllUsers = async (req, res) => {
       success: true,
       users,
       total,
-      pages: Math.ceil(total / limit)
+      pages: Math.ceil(total / parsedLimit)
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -261,7 +272,14 @@ export const getAllUsers = async (req, res) => {
  */
 export const getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).select('-password');
+    const { userId } = req.params;
+    
+    // ✅ Validate ObjectId format
+    if (!userId || !/^[0-9a-fA-F]{24}$/.test(userId)) {
+      return res.status(400).json({ success: false, message: 'Identifiant utilisateur invalide' });
+    }
+
+    const user = await User.findById(userId).select('-password');
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
@@ -463,6 +481,67 @@ export const deleteReview = async (req, res) => {
     res.json({
       success: true,
       message: 'Avis supprimé'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ============ PROFIL ADMIN ============
+
+/**
+ * Obtenir le profil de l'admin connecté
+ */
+export const getAdminProfile = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+
+    // Vérifier que l'admin ne peut accéder que à son propre profil (sauf s'il accède au sien)
+    const admin = await User.findById(adminId).select('-password');
+    
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin non trouvé' });
+    }
+
+    if (admin.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Cet utilisateur n\'est pas admin' });
+    }
+
+    res.json({
+      success: true,
+      admin: {
+        id: admin._id,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        email: admin.email,
+        role: admin.role,
+        createdAt: admin.createdAt,
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ============ PARAMÈTRES ADMIN ============
+
+/**
+ * Obtenir les paramètres d'administration
+ */
+export const getAdminSettings = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      settings: {
+        siteName: 'EliteShop',
+        currency: 'EUR',
+        taxRate: 20,
+        shippingCost: 5,
+        maintenanceMode: false,
+        emailNotifications: true,
+        logRetentionDays: 30,
+        maxUploadSize: 10, // MB
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

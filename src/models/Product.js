@@ -16,7 +16,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, 'La catégorie est requise'],
-      enum: ['Vetements', 'Chaussures', 'Montres', 'Bijoux', 'Beaute'],
+      enum: ['Vêtements', 'Chaussures', 'Montres', 'Bijoux', 'Beauté'],
     },
     price: {
       type: Number,
@@ -56,6 +56,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+      default: null,
     },
     isActive: {
       type: Boolean,
@@ -69,6 +70,19 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1 });
 productSchema.index({ price: 1 });
+
+// Hook pre-save pour générer un SKU unique si vide
+productSchema.pre('save', function() {
+  if (!this.sku || (typeof this.sku === 'string' && this.sku.trim() === '')) {
+    // Générer un SKU basé sur le nom et un timestamp
+    const timestamp = Date.now();
+    const sanitizedName = this.name
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .substring(0, 10);
+    this.sku = `${sanitizedName}-${timestamp}`;
+  }
+});
 
 const Product = mongoose.model('Product', productSchema);
 

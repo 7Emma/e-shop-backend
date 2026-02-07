@@ -5,13 +5,13 @@ import {
   removeFromWishlist,
   checkWishlist,
 } from '../controllers/wishlistController.js';
-import { verifyToken } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-router.get('/', verifyToken, getWishlist);
-router.post('/add/:productId', verifyToken, addToWishlist);
-router.delete('/remove/:productId', verifyToken, removeFromWishlist);
-router.post('/check/:productId', verifyToken, checkWishlist);
+// ⚠️ Pas d'authentification requise - Accès libre
+router.get('/', getWishlist);
+router.post('/add/:productId', addToWishlist);
+router.delete('/remove/:productId', removeFromWishlist);
+router.post('/check/:productId', checkWishlist);
 
 export default router;

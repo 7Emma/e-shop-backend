@@ -5,13 +5,13 @@ import {
   updateReview,
   deleteReview,
 } from '../controllers/reviewController.js';
-import { verifyToken } from '../middlewares/auth.js';
 
 const router = express.Router();
 
+// ⚠️ Pas d'authentification requise
 router.get('/product/:productId', getProductReviews);
-router.post('/', verifyToken, createReview);
-router.put('/:id', verifyToken, updateReview);
-router.delete('/:id', verifyToken, deleteReview);
+router.post('/', createReview);
+router.put('/:id', updateReview);
+router.delete('/:id', deleteReview);
 
 export default router;

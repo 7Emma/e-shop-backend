@@ -48,6 +48,9 @@ cartSchema.methods.calculateTotal = async function () {
 
   this.totalItems = totalItems;
   this.totalPrice = totalPrice;
+  
+  // ✅ Sauvegarder les modifications
+  await this.save();
   return this;
 };
 

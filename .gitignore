@@ -11,5 +11,14 @@
 
 #!.yarn/cache
 .pnp.*
+
+# ✅ Environment variables - NEVER commit these files
 .env
 .env.local
+.env.backup
+.env.*.local
+
+# Secrets
+*.key
+*.pem
+secrets/

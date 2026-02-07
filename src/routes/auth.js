@@ -1,9 +1,18 @@
 import express from 'express';
-import { register, login } from '../controllers/authController.js';
+import { login, logout } from '../controllers/authController.js';
+import { authLimiter } from '../middlewares/rateLimiting.js';
 
 const router = express.Router();
 
-router.post('/register', register);
-router.post('/login', login);
+// ⚠️ Inscription DISABLED pour sécurité - admin only
+router.post('/register', (req, res) => {
+  return res.status(403).json({ 
+    success: false, 
+    message: 'Inscription désactivée. Contactez l\'administrateur.' 
+  });
+});
+
+router.post('/login', authLimiter, login);
+router.post('/logout', logout);
 
 export default router;

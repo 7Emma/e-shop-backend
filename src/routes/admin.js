@@ -15,13 +15,25 @@ import {
   updateOrderStatus,
   getAllReviews,
   deleteReview,
+  getAdminProfile,
+  getAdminSettings,
 } from '../controllers/adminController.js';
-import { verifyToken, verifyAdmin } from '../middlewares/auth.js';
+import { verifyAdmin } from '../middlewares/auth.js';
+import { validateObjectId } from '../middlewares/validation.js';
+import { login } from '../controllers/authController.js';
+import { authLimiter } from '../middlewares/rateLimiting.js';
 
 const router = express.Router();
 
-// Appliquer la vérification d'authentification et d'admin à toutes les routes
-router.use(verifyToken, verifyAdmin);
+// ============ PROFIL ADMIN ============
+// Route de connexion admin (alias pour /api/auth/login)
+router.post('/login', authLimiter, login);
+
+// ⚠️ Vérification admin seulement (pas d'auth requise mais admin check appliqué)
+router.use(verifyAdmin);
+
+// Obtenir le profil de l'admin par ID
+router.get('/profile/:adminId', validateObjectId('adminId'), getAdminProfile);
 
 // ============ STATISTIQUES ============
 router.get('/stats', getDashboardStats);
@@ -35,17 +47,23 @@ router.get('/products', getAllProducts);
 
 // ============ GESTION DES UTILISATEURS ============
 router.get('/users', getAllUsers);
-router.get('/users/:userId', getUser);
-router.put('/users/:userId/role', changeUserRole);
-router.delete('/users/:userId', deleteUser);
+// ✅ Validate ObjectId for user routes
+router.get('/users/:userId', validateObjectId('userId'), getUser);
+router.put('/users/:userId/role', validateObjectId('userId'), changeUserRole);
+router.delete('/users/:userId', validateObjectId('userId'), deleteUser);
 
 // ============ GESTION DES COMMANDES ============
 router.get('/orders', getAllOrders);
-router.get('/orders/:orderId', getOrder);
-router.put('/orders/:orderId', updateOrderStatus);
+// ✅ Validate ObjectId for order routes
+router.get('/orders/:orderId', validateObjectId('orderId'), getOrder);
+router.put('/orders/:orderId', validateObjectId('orderId'), updateOrderStatus);
 
 // ============ GESTION DES AVIS ============
 router.get('/reviews', getAllReviews);
-router.delete('/reviews/:reviewId', deleteReview);
+// ✅ Validate ObjectId for review routes
+router.delete('/reviews/:reviewId', validateObjectId('reviewId'), deleteReview);
+
+// ============ PARAMÈTRES ADMIN ============
+router.get('/settings', getAdminSettings);
 
 export default router;

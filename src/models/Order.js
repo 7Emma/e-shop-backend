@@ -5,14 +5,18 @@ const orderSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false, // Guest orders have no user
     },
     items: [
       {
         product: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Product',
-          required: true,
+          required: false, // Guest orders may not have product refs
+        },
+        name: {
+          type: String,
+          required: false, // For guest orders
         },
         quantity: {
           type: Number,
@@ -30,6 +34,9 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
     shippingAddress: {
+      firstName: String,
+      lastName: String,
+      email: String,
       street: String,
       city: String,
       zipCode: String,
@@ -51,6 +58,30 @@ const orderSchema = new mongoose.Schema(
       default: 0,
     },
     notes: String,
+    trackingNumber: String,
+    trackingCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      required: true,
+      minlength: 8,
+      maxlength: 12,
+    },
+    stripeSessionId: String,
+    stripePaymentIntentId: String,
+    receivedAt: Date,
+    isReceived: {
+      type: Boolean,
+      default: false,
+    },
+    rating: {
+      score: {
+        type: Number,
+        min: 1,
+        max: 5,
+      },
+      ratedAt: Date,
+    },
   },
   { timestamps: true }
 );
